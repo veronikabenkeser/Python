@@ -1,0 +1,60 @@
+# Udacity CS101 
+
+# This crawler takes 3 parameters: seed, max_pages, and max_depth.
+
+# The crawler terminates when max_pages different pages have been 
+# crawled, or when there are no more pages to crawl.
+#
+# Max_depth is the number of links that must
+# be followed to reach that page starting from the seed page/
+# the length of the shortest path from the seed to
+# the page.  No pages whose depth exceeds max_depth are
+# included in the crawl.  
+# 
+# For example, if max_depth is 0, the only page that should
+# be crawled is the seed page. If max_depth is 1, the pages
+# that should be crawled are the seed page and every page that 
+# it links to directly. If max_depth is 2, the crawl should 
+# also include all pages that are linked to by these pages.
+
+from bs4 import BeautifulSoup
+import requests
+
+seed = "http://www.udacity.com/cs101x/index.html"
+
+def get_page(url):
+    source_code = requests.get(url)
+    plain_text = source_code.text
+    return plain_text
+    
+def crawl_web(url, max_pages, max_depth):
+    allLinks=[url]
+    crawled=[]
+    newL=[]
+    count=0
+
+    while allLinks and len(crawled)<max_pages:
+
+            for link in allLinks:
+
+                if link not in crawled:
+                    #find links on this page
+                    soup = BeautifulSoup(get_page(link))
+
+                    for elem in soup.findAll('a'):
+                        href = elem.get('href')
+                        newL.append(href)
+
+                    crawled.append(link)
+
+                if len(crawled)>=max_pages:
+                    break
+            count+=1
+            if count>max_depth:
+                break
+            else:
+                allLinks=newL
+                newL=[]
+
+    print(crawled)
+    return crawled
