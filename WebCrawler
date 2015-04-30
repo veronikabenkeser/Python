@@ -1,0 +1,117 @@
+from bs4 import BeautifulSoup
+import requests
+import re
+import urllib.robotparser
+import nltk
+from nltk.stem.wordnet import WordNetLemmatizer
+#nltk.download()
+#from nltk.book import *
+
+
+seed = "http://www.udacity.com/cs101x/index.html"
+
+#Crawl webpages until max_page is reached
+
+def get_page(url):
+    source_code = requests.get(url)
+    plain_text = source_code.text
+    return plain_text
+
+def can_crawl():
+    rp = urllib.robotparser.RobotFileParser()
+    # robotparser module contains functions, read, set, url, can fetch
+    #rp.set_url(../robots.txt)
+    #rp.read()
+    #rp.can_fetch("*", ..) --> T or False
+
+
+def crawl_web(url, max_pages, max_depth):
+    wordIndex=[]
+    allLinks=[url]
+    crawled=[]
+    newL=[]
+    count=0
+
+    #while there are links left and we have crawled less than the specified number of pages, crawl websites
+
+    while allLinks and len(crawled)<max_pages:
+
+            for link in allLinks:
+
+                if link not in crawled:
+                    #find links on this page
+                    soup = BeautifulSoup(get_page(link))
+                    page = soup.text
+                    devInd=devIndex(page) #find all the key words on this page
+                    print(devInd)
+                    for each_item in devInd:
+                        if wordIndex:
+                            addIfReq(wordIndex, each_item, link)
+                             #scan all of the word index to see if the key and link are already in it
+
+                        else:
+                            subInd=[each_item, [link]]
+                            wordIndex.append(subInd)
+
+                    for elem in soup.findAll('a'): #find all the links on this page
+                        href = elem.get('href')
+                        newL.append(href)
+
+                    crawled.append(link)
+                    allLinks.remove(link)
+
+                if len(crawled)>=max_pages:
+                    break
+            count+=1
+            if count>max_depth:
+                break
+            else:
+                allLinks=newL
+                newL=[]
+    print(wordIndex)
+    return crawled
+
+def devIndex(page):
+    try:
+        tokenized = nltk.word_tokenize(page)
+        #apply part of speech tags
+        tagged = nltk.pos_tag(tokenized)
+
+
+        #can do this instead of chunking:
+        #namedEnt = nltk.ne_chunk(tagged, binary=True)
+        #namedEnt.draw()
+
+        #chunk - group various words together based on part of speech
+        chunkGram = r"""
+    Chunk:
+        {<.*>}
+        }<DT|VBS|IN|TO|VBZ|CC|PRP|VBP|.|,|RB|MD>{
+    """
+        chunkParser = nltk.RegexpParser(chunkGram)
+        chunked = chunkParser.parse(tagged)
+        indexKeys = re.findall(r'Chunk (\w*)', str(chunked))
+        print("old index keys ", indexKeys)
+        for word in indexKeys:
+            lemmatizer = WordNetLemmatizer()
+            indexKeys[indexKeys.index(word)]=lemmatizer.lemmatize(word, 'v') #get the infinitive form of all the verbs
+            print(indexKeys)
+
+        print("new index keys ", indexKeys)
+
+        return indexKeys
+
+    except Exception as e:
+        print(str(e))
+
+
+def addIfReq(wordIndex, itemToCompare, link):
+    for item in wordIndex:
+        if item[0] == itemToCompare and link not in item[1]:
+            item[1].append(link)
+            return
+        if item[0] == itemToCompare and link in item[1]:
+            return
+
+    subInd=[itemToCompare, [link]]
+    wordIndex.append(subInd)
