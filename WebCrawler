@@ -7,7 +7,6 @@ from nltk.stem.wordnet import WordNetLemmatizer
 #nltk.download()
 #from nltk.book import *
 
-
 seed = "http://www.udacity.com/cs101x/index.html"
 
 #Crawl webpages until max_page is reached
@@ -24,13 +23,13 @@ def can_crawl():
     #rp.read()
     #rp.can_fetch("*", ..) --> T or False
 
-
 def crawl_web(url, max_pages, max_depth):
-    wordIndex=[]
+    wordIndex={}
     allLinks=[url]
     crawled=[]
     newL=[]
     count=0
+    numClicks=0
 
     #while there are links left and we have crawled less than the specified number of pages, crawl websites
 
@@ -43,15 +42,13 @@ def crawl_web(url, max_pages, max_depth):
                     soup = BeautifulSoup(get_page(link))
                     page = soup.text
                     devInd=devIndex(page) #find all the key words on this page
-                    print(devInd)
                     for each_item in devInd:
                         if wordIndex:
                             addIfReq(wordIndex, each_item, link)
                              #scan all of the word index to see if the key and link are already in it
 
                         else:
-                            subInd=[each_item, [link]]
-                            wordIndex.append(subInd)
+                            wordIndex[each_item]=[link, numClicks]
 
                     for elem in soup.findAll('a'): #find all the links on this page
                         href = elem.get('href')
@@ -68,8 +65,10 @@ def crawl_web(url, max_pages, max_depth):
             else:
                 allLinks=newL
                 newL=[]
+    print(crawled)
     print(wordIndex)
-    return crawled
+    print(lookup(wordIndex, "learn"))
+    return crawled, wordIndex
 
 def devIndex(page):
     try:
@@ -91,27 +90,28 @@ def devIndex(page):
         chunkParser = nltk.RegexpParser(chunkGram)
         chunked = chunkParser.parse(tagged)
         indexKeys = re.findall(r'Chunk (\w*)', str(chunked))
-        print("old index keys ", indexKeys)
         for word in indexKeys:
             lemmatizer = WordNetLemmatizer()
             indexKeys[indexKeys.index(word)]=lemmatizer.lemmatize(word, 'v') #get the infinitive form of all the verbs
-            print(indexKeys)
-
-        print("new index keys ", indexKeys)
-
         return indexKeys
 
     except Exception as e:
         print(str(e))
 
 
-def addIfReq(wordIndex, itemToCompare, link):
-    for item in wordIndex:
-        if item[0] == itemToCompare and link not in item[1]:
-            item[1].append(link)
-            return
-        if item[0] == itemToCompare and link in item[1]:
-            return
+def addIfReq(wordIndex, keyword, link):
+    numClicks=0
+    if lookup(wordIndex, keyword) != None and link not in wordIndex[keyword]:
+        wordIndex[keyword].append([link, numClicks])
+        return
+    if lookup(wordIndex, keyword) != None and link in wordIndex[keyword]:
+        return
 
-    subInd=[itemToCompare, [link]]
-    wordIndex.append(subInd)
+    wordIndex[keyword]=[link, numClicks]
+
+def lookup(index, keyword):
+    if keyword in index:
+        return index[keyword]
+
+    return None
+    
