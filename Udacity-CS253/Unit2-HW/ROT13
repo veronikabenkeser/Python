@@ -1,0 +1,66 @@
+import webapp2
+
+form = """
+<form method="post">
+
+<b> Enter some text to ROT 13 </b>
+	<br>
+	<textarea name="text" rows="3" cols = "40" wrap="hard">%(answer)s</textarea>
+	<br>
+	<input type= "submit">
+</form>
+
+"""
+class MainHandler(webapp2.RequestHandler):
+    def write_form(self, answer=""): #answer defaults to blank
+        self.response.out.write(form %{'answer': answer})
+    
+    def get(self): #draws the form
+        self.write_form()
+		
+    def post(self):
+       
+        ta=self.request.get("text") #get user's input
+        encodedT=incrementBy13(ta) #move each letter by 13 spaces
+        self.write_form(reformat_text(encodedT)) #make sure that HTML chars are escaped before rendering text/showing modified text
+				
+		
+app = webapp2.WSGIApplication([('/', MainHandler)], debug=True)
+
+def incrementBy13(text):
+    temp = False
+    result=""
+    alpStr = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z"
+    alp = [x.strip() for x in alpStr.split(",")]
+    
+    for letter in text:
+
+        if letter.isalpha():
+            
+            if letter == letter.upper():
+                temp=True
+            if letter.lower() in alp:
+                ind=alp.index(letter.lower())
+                if ind+13>len(alp):
+                    letter=alp[ind+13-len(alp)]
+                elif ind+13==len(alp):
+                    letter = alp[0]
+                else:
+                    letter = alp[ind+13]
+
+                if temp:
+                    letter=letter.upper()
+                    
+                temp=False
+
+        result+=letter
+    return result
+
+def reformat_text(text):
+    for (i, o) in (("&", "&amp;"),
+                   (">", "&gt;"),
+                   ("<", "&lt;"),
+                   ('"', "&quot;")):
+        text = text.replace(i,o)
+    return text
+    
